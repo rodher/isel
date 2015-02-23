@@ -12,25 +12,19 @@ fsm_new (fsm_trans_t* tt)
 void
 fsm_init (fsm_t* this, fsm_trans_t* tt)
 {
-  int state, in;
   this->tt = tt;
-  for (state = 0; state < MAXSTATES; ++state) {
-    for (in = 0; in < MAXINS; ++in) {
-      this->next_state[state][in] = state;
-      this->run[state][in] = NULL;
-    }
-  }
-  for (; tt->orig_state >= 0; ++tt) {
-      this->next_state[tt->orig_state][tt->in] = tt->dest_state;
-      this->run[tt->orig_state][tt->in] = tt->run;
-  }
 }
 
 void
-fsm_fire (fsm_t* this, int in)
+fsm_fire (fsm_t* this)
 {
-  fsm_output_func_t run = this->run[this->current_state][in];
-  this->current_state = this->next_state[this->current_state][in];
-  if (run)
-    run (this);
+  fsm_trans_t* t;
+  for (t = this->tt; t->orig_state >= 0; ++t) {
+    if ((this->current_state == t->orig_state) && t->in(this)) {
+      this->current_state = t->dest_state;
+      if (t->out)
+        t->out(this);
+      break;
+    }
+  }
 }

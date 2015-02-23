@@ -107,7 +107,7 @@ static void vueltas(fsm_t* this)
   digitalWrite (GPIO_LED, HIGH);
 
 	int cambio= PRECIO - //cuenta;   //VALOR ABSOLUTO
-         return cambio;
+  return cambio;
 
 }
 
