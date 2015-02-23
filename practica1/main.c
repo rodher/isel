@@ -44,13 +44,13 @@ enum cofm_state {
 };
 
 enum monedas{   //Tipo de monedas que acepta la máquina
-  5c=0,
-  10c=1,
-  20c=2,
-  50c=3,
-  1e=4,
-  2e=5
-}
+  C5=0,
+  C10=1,
+  C20=2,
+  C50=3,
+  E1=4,
+  E2=5,
+};
 
 static int button = 0;
 static void button_isr (void) { button = 1; }
@@ -60,19 +60,19 @@ static void money_isr (void) {
   int monedaID = digitalRead(GPIO_MONEY2)*4+digitalRead(GPIO_MONEY1)*2+digitalRead(GPIO_MONEY0); // Combinamos tres entradas en un numero de 3 bits
   int valor;
   switch(monedaID){
-    case 5c :
+    case C5 :
       valor=5;
       break;
-    case 10c :
+    case C10 :
       valor=10;
       break;
-    case 50c :
+    case C50 :
       valor=50;
       break;
-    case 1e :
+    case E1 :
       valor=100;
       break;
-    case 2e :
+    case E2 :
       valor=200;
       break;
     default :
@@ -115,7 +115,7 @@ static int button_pressed (fsm_t* this)
   } else return 0;
 }
 
-static int money (fsm_t* this)
+static int insert_coin (fsm_t* this)
 {
   int ret = money;
   money = 0;
@@ -212,7 +212,7 @@ static fsm_trans_t cofm[] = {
 };
 
 static fsm_trans_t cashm[] = {
-  { COFM_MONEY, money, COFM_VUELTAS, enough_money},
+  { COFM_MONEY, insert_coin, COFM_VUELTAS, enough_money},
   { COFM_VUELTAS, coffee_served, COFM_MONEY, getChange},   //DEVUELVE EL DINERO CUANDO HA ACABADO DE ECHAR LA LECHE
   {-1, NULL, -1, NULL },
 };

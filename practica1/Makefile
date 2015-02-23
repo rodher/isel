@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-g -Wall -O -I.
 LDFLAGS=
-LDLIBS=-lwiringPi
+LDLIBS=-lwiringPi -lrt
 
 all: main
 
