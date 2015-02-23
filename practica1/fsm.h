@@ -1,30 +1,28 @@
-#include <stdlib.h>
-#include "fsm.h"
+#ifndef FSM_H
+#define FSM_H
 
-fsm_t*
-fsm_new (fsm_trans_t* tt)
-{
-  fsm_t* this = (fsm_t*) malloc (sizeof (fsm_t));
-  fsm_init (this, tt);
-  return this;
-}
+#define MAXSTATES 10
+#define MAXINS 32
 
-void
-fsm_init (fsm_t* this, fsm_trans_t* tt)
-{
-  this->tt = tt;
-}
+typedef struct fsm_t fsm_t;
 
-void
-fsm_fire (fsm_t* this)
-{
-  fsm_trans_t* t;
-  for (t = this->tt; t->orig_state >= 0; ++t) {
-    if ((this->current_state == t->orig_state) && t->in(this)) {
-      this->current_state = t->dest_state;
-      if (t->out)
-        t->out(this);
-      break;
-    }
-  }
-}
+typedef int (*fsm_input_func_t) (fsm_t*);
+typedef void (*fsm_output_func_t) (fsm_t*);
+
+typedef struct fsm_trans_t {
+  int orig_state;
+  fsm_input_func_t in;
+  int dest_state;
+  fsm_output_func_t out;
+} fsm_trans_t;
+
+struct fsm_t {
+  int current_state;
+  fsm_trans_t* tt;
+};
+
+fsm_t* fsm_new (fsm_trans_t* tt);
+void fsm_init (fsm_t* this, fsm_trans_t* tt);
+void fsm_fire (fsm_t* this);
+
+#endif

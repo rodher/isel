@@ -10,15 +10,29 @@
 #define GPIO_CUP	4
 #define GPIO_COFFEE	5
 #define GPIO_MILK	6
-#define GPIO_MONEY      7
-#define GPIO_VUELTAS    8
+#define GPIO_MONEY0   7 // Los tres pines determinan el tipo de moneda que se ha introducido
+#define GPIO_MONEY1   8
+#define GPIO_MONEY2   9
+#define GPIO_COIN     10  // Flag que interrumpe avisandonos de que hay moneda
+#define GPIO_5C       11  // Cada pin devuelve un tipo de moneda al activarse. 
+#define GPIO_10C      12  // Se supone que el mecanismo para devolver monedas se activa por flanco
+#define GPIO_20C      13
+#define GPIO_50C      14
+#define GPIO_1E       15
+#define GPIO_2E       16
 
 #define CUP_TIME	250
 #define COFFEE_TIME	3000
 #define MILK_TIME	3000
 
-#define PRECIO         0.50
+#define PRECIO         50 // Expresado en centimos para poder trabajar con enteros
 
+
+static int dinero = 0; // Variable global que lleva la cuenta del dinero
+
+static int cobrar = 0; // Flag que indica al monedero que debemos cobrar:                         |<--|cobrar
+                                                                                      //MONEDERO  |   |   MAQUINA DE CAFE
+static int hay_dinero = 0;  // Flag con la que el monedero nos avisa de si hay dinero   hay_dinero|-->|
 
 enum cofm_state {
   COFM_WAITING,
@@ -29,11 +43,46 @@ enum cofm_state {
   COFM_VUELTAS,
 };
 
+enum monedas{   //Tipo de monedas que acepta la máquina
+  5c=0,
+  10c=1,
+  20c=2,
+  50c=3,
+  1e=4,
+  2e=5
+}
+
 static int button = 0;
 static void button_isr (void) { button = 1; }
 
 static int money = 0;
-static void money_isr (void) { money = 1; }    //INTERRUPCIÓN PARA LA ENTRADA DE MONEDAS
+static void money_isr (void) { 
+  int monedaID = digitalRead(GPIO_MONEY2)*4+digitalRead(GPIO_MONEY1)*2+digitalRead(GPIO_MONEY0); // Combinamos tres entradas en un numero de 3 bits
+  int valor;
+  switch(monedaID){
+    case 5c :
+      valor=5;
+      break;
+    case 10c :
+      valor=10;
+      break;
+    case 50c :
+      valor=50;
+      break;
+    case 1e :
+      valor=100;
+      break;
+    case 2e :
+      valor=200;
+      break;
+    default :
+      valor=0;
+      break;
+  }
+
+  dinero+=valor;
+  if(dinero>=PRECIO) money=1;
+}    //INTERRUPCIÓN PARA LA ENTRADA DE MONEDAS
 
 
 static int timer = 0;
@@ -57,9 +106,13 @@ static void timer_start (int ms)
 
 static int button_pressed (fsm_t* this)
 {
-  int ret = button;
-  button = 0;
-  return ret;
+  int ret1 = button;
+  int ret2 = hay_dinero;
+  if(ret1&&ret2){         // Comprueba que ambos se cumplen antes de resetearlos
+    button  = 0;
+    hay_dinero = 0;
+    return 1;
+  } else return 0;
 }
 
 static int money (fsm_t* this)
@@ -67,9 +120,11 @@ static int money (fsm_t* this)
   int ret = money;
   money = 0;
   return ret;
+}
 
-  int cuenta = cuenta + moneda;       //NO SE HACER UN BUFER QUE VAYA ALMACENANDO LOS VALORES DE LAS MONEDAS, PERO ESTA ES LA IDEA
-
+static int coffee_served (fsm_t* this)
+{
+  return cobrar; // En este caso es la funcion de salida getChange la que resetea el flag de cobrar
 }
 
 static int timer_finished (fsm_t* this)
@@ -100,25 +155,51 @@ static void milk (fsm_t* this)
   timer_start (MILK_TIME);
 }
 
-
-static void vueltas(fsm_t* this)
-{
-  digitalWrite (GPIO_VUELTAS, HIGH);    //TE DICE SI SE HAN DEVUELTO LAS VUELTAS (HIGH) O NO.
-  digitalWrite (GPIO_LED, HIGH);
-
-	int cambio= PRECIO - //cuenta;   //VALOR ABSOLUTO
-  return cambio;
-
-}
-
-
 static void finish (fsm_t* this)
 {
   digitalWrite (GPIO_MILK, LOW);
   digitalWrite (GPIO_LED, HIGH);
+  cobrar = 1;
 }
 
+static void enough_money(fsm_t* this)
+{
+  hay_dinero = 1;
+}
 
+static void getChange(fsm_t* this)
+{ 
+  // Estructura de control que va devolviendo el cambio. Cada "palanca devuelve-cambio" se activa por flanco
+  // Quiza sea mas elegante usar un bucle y una estructura de arrays, pero esta forma es mas entendible
+  if(dinero>=200){
+    dinero-=200;
+    digitalWrite(GPIO_2E, HIGH);
+    digitalWrite(GPIO_2E, LOW);
+  }else if(dinero>=100){
+    dinero-=100;
+    digitalWrite(GPIO_1E, HIGH);
+    digitalWrite(GPIO_1E, LOW);
+  }else if(dinero>=50){
+    dinero-=50;
+    digitalWrite(GPIO_50C, HIGH);
+    digitalWrite(GPIO_50C, LOW);
+  }else if(dinero>=20){
+    dinero-=20;
+    digitalWrite(GPIO_20C, HIGH);
+    digitalWrite(GPIO_20C, LOW);
+  }else if(dinero>=10){
+    dinero-=10;
+    digitalWrite(GPIO_10C, HIGH);
+    digitalWrite(GPIO_10C, LOW);
+  }else if(dinero>=5){
+    dinero-=5;
+    digitalWrite(GPIO_5C, HIGH);
+    digitalWrite(GPIO_5C, LOW);
+  }
+  
+  if(dinero>=0) this->current_state=COFM_VUELTAS;
+  else cobrar=0;
+}
 
 
 // Explicit FSM description
@@ -130,9 +211,9 @@ static fsm_trans_t cofm[] = {
   {-1, NULL, -1, NULL },
 };
 
-static fsm_trans_t cofm2[] = {
-  { COFM_MONEY, money, COFM_VUELTAS, vueltas},
-  { COFM_VUELTAS, milk, COFM_MONEY, finish },   //DEVUELVE EL DINERO CUANDO HA ACABADO DE ECHAR LA LECHE
+static fsm_trans_t cashm[] = {
+  { COFM_MONEY, money, COFM_VUELTAS, enough_money},
+  { COFM_VUELTAS, coffee_served, COFM_MONEY, getChange},   //DEVUELVE EL DINERO CUANDO HA ACABADO DE ECHAR LA LECHE
   {-1, NULL, -1, NULL },
 };
 
@@ -178,22 +259,32 @@ int main ()
   struct timeval clk_period = { 0, 250 * 1000 };
   struct timeval next_activation;
   fsm_t* cofm_fsm = fsm_new (cofm);
+  fsm_t* cashm_fsm = fsm_new (cashm);
 
   wiringPiSetup();
   pinMode (GPIO_BUTTON, INPUT);
-  pinMode (GPIO_MONEY, INPUT);
+  pinMode (GPIO_MONEY0, INPUT);
+  pinMode (GPIO_MONEY1, INPUT);
+  pinMode (GPIO_MONEY2, INPUT);
+  pinMode (GPIO_COIN, INPUT);
   wiringPiISR (GPIO_BUTTON, INT_EDGE_FALLING, button_isr);
-  wiringPiISR (GPIO_MONEY, INT_EDGE_FALLING, money_isr);
-  pinMode (GPIO_VUELTAS, OUTPUT);
+  wiringPiISR (GPIO_COIN, INT_EDGE_FALLING, money_isr);
   pinMode (GPIO_CUP, OUTPUT);
   pinMode (GPIO_COFFEE, OUTPUT);
   pinMode (GPIO_MILK, OUTPUT);
   pinMode (GPIO_LED, OUTPUT);
+  pinMode (GPIO_5C, OUTPUT);
+  pinMode (GPIO_10C, OUTPUT);
+  pinMode (GPIO_20C, OUTPUT);
+  pinMode (GPIO_50C, OUTPUT);
+  pinMode (GPIO_1E, OUTPUT);
+  pinMode (GPIO_2E, OUTPUT);
   digitalWrite (GPIO_LED, HIGH);
   
   gettimeofday (&next_activation, NULL);
   while (1) {
     fsm_fire (cofm_fsm);
+    fsm_fire (cashm_fsm);
     timeval_add (&next_activation, &next_activation, &clk_period);
     delay_until (&next_activation);
   }
