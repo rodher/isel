@@ -44,12 +44,12 @@ enum cofm_state {
 };
 
 enum monedas{   //Tipo de monedas que acepta la máquina
-  C5=0,
-  C10=1,
-  C20=2,
-  C50=3,
-  E1=4,
-  E2=5,
+  C5=1,
+  C10=2,
+  C20=3,
+  C50=4,
+  E1=5,
+  E2=6,
 };
 
 static int button = 0;
@@ -65,6 +65,9 @@ static void money_isr (void) {
       break;
     case C10 :
       valor=10;
+      break;
+    case C20 :
+      valor=20;
       break;
     case C50 :
       valor=50;
@@ -159,6 +162,7 @@ static void finish (fsm_t* this)
 {
   digitalWrite (GPIO_MILK, LOW);
   digitalWrite (GPIO_LED, HIGH);
+  dinero -= PRECIO;
   cobrar = 1;
 }
 
