@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <wiringPi.h>
 #include "fsm.h"
+#include <stdio.h>
 
 #define GPIO_BUTTON	2
 #define GPIO_LED	3
@@ -39,17 +40,20 @@ enum cofm_state {
   COFM_CUP,
   COFM_COFFEE,
   COFM_MILK,
+};
+
+enum cashm_state {
   COFM_MONEY,
   COFM_VUELTAS,
 };
 
 enum monedas{   //Tipo de monedas que acepta la máquina
-  C5=0,
-  C10=1,
-  C20=2,
-  C50=3,
-  E1=4,
-  E2=5,
+  C5=1,
+  C10=2,
+  C20=3,
+  C50=4,
+  E1=5,
+  E2=6,
 };
 
 static int button = 0;
@@ -65,6 +69,9 @@ static void money_isr (void) {
       break;
     case C10 :
       valor=10;
+      break;
+    case C20 :
+      valor=20;
       break;
     case C50 :
       valor=50;
@@ -160,6 +167,7 @@ static void finish (fsm_t* this)
   digitalWrite (GPIO_MILK, LOW);
   digitalWrite (GPIO_LED, HIGH);
   cobrar = 1;
+  dinero -= PRECIO;
 }
 
 static void enough_money(fsm_t* this)
@@ -256,8 +264,8 @@ void delay_until (struct timeval* next_activation)
 
 int main ()
 {
-  struct timeval clk_period = { 0, 250 * 1000 };
-  struct timeval next_activation;
+  //struct timeval clk_period = { 0, 250 * 1000 };
+  //struct timeval next_activation;
   fsm_t* cofm_fsm = fsm_new (cofm);
   fsm_t* cashm_fsm = fsm_new (cashm);
 
@@ -280,14 +288,25 @@ int main ()
   pinMode (GPIO_1E, OUTPUT);
   pinMode (GPIO_2E, OUTPUT);
   digitalWrite (GPIO_LED, HIGH);
+
+	/*Variables para pruebas*/
+	int mon0;
+	int mon1;
+	int mon2;
+	int momento;
   
-  gettimeofday (&next_activation, NULL);
-  while (1) {
-    fsm_fire (cofm_fsm);
+  //gettimeofday (&next_activation, NULL);
+  while (timer!=-1) {
+    scanf("%d %d %d %d %d %d\n", &momento, &button, &timer, &mon2, &mon1, &mon0);
+    actualizaMoney(mon0, mon1, mon2);
+    money_isr();
+    printf("%d.\n", momento);
     fsm_fire (cashm_fsm);
-    timeval_add (&next_activation, &next_activation, &clk_period);
-    delay_until (&next_activation);
+    fsm_fire (cofm_fsm);
+    //timeval_add (&next_activation, &next_activation, &clk_period);
+    //delay_until (&next_activation);
   }
 
-
+  return 0;
+	
 }
