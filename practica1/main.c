@@ -96,6 +96,7 @@ static int timer = 0;
 static void timer_isr (union sigval arg) { timer = 1; }
 static void timer_start (int ms)
 {
+  /*
   timer_t timerid;
   struct itimerspec value;
   struct sigevent se;
@@ -109,6 +110,7 @@ static void timer_start (int ms)
   value.it_interval.tv_nsec = 0;
   timer_create (CLOCK_REALTIME, &se, &timerid);
   timer_settime (timerid, 0, &value, NULL);
+  */
 }
 
 static int button_pressed (fsm_t* this)
