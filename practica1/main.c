@@ -1,3 +1,12 @@
+/*
+
+PRACTICA 1 DE ISEL CURSO 2014/2015
+Autores: Rodrigo Hernangomez Herrero y Ana Jimenez Valbuena
+Febrero 2015
+
+*/
+
+
 #include <sys/select.h>
 #include <sys/time.h>
 #include <time.h>
