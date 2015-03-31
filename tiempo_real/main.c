@@ -338,17 +338,12 @@ int main ()
 	int momento;
 
   /*Variables para medida de tiempos*/
-  struct timespec* a_spec;
-  struct timespec* b_spec;
-  struct timespec* cash_spec;
-  struct timespec* cof_spec;
-  struct timespec* cashmax_spec;
-  struct timespec* cofmax_spec;
-
-  cashmax_spec->tv_sec = 0;
-  cashmax_spec->tv_nsec = 0;
-  cofmax_spec->tv_sec = 0;
-  cofmax_spec->tv_nsec = 0;
+  struct timespec a_spec={0, 0};
+  struct timespec b_spec={0, 0};
+  struct timespec cash_spec={0, 0};
+  struct timespec cof_spec={0, 0};
+  struct timespec cashmax_spec={0, 0};
+  struct timespec cofmax_spec={0, 0};
   
   gettimeofday (&next_activation, NULL);
   while (timer!=-1) {
@@ -357,26 +352,26 @@ int main ()
     money_isr();
     printf("%d.\n", momento);
 
-    clock_gettime(CLOCK_MONOTONIC,b_spec);
+    clock_gettime(CLOCK_MONOTONIC,&b_spec);
     fsm_fire (cashm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,a_spec);
-    timespec_sub(cash_spec, a_spec, b_spec);
-    timespec_max(cashmax_spec, cashmax_spec, cash_spec);
+    clock_gettime(CLOCK_MONOTONIC,&a_spec);
+    timespec_sub(&cash_spec, &a_spec, &b_spec);
+    timespec_max(&cashmax_spec, &cashmax_spec, &cash_spec);
 
-    clock_gettime(CLOCK_MONOTONIC,b_spec);
+    clock_gettime(CLOCK_MONOTONIC,&b_spec);
     fsm_fire (cofm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,a_spec);
-    timespec_sub(cof_spec, a_spec, b_spec);
-    timespec_max(cofmax_spec, cofmax_spec, cof_spec);
+    clock_gettime(CLOCK_MONOTONIC,&a_spec);
+    timespec_sub(&cof_spec, &a_spec, &b_spec);
+    timespec_max(&cofmax_spec, &cofmax_spec, &cof_spec);
 
-    printf("Tiempo de ejecucion de cashm: %d segundos y %d nanosegundos\n",cash_spec->tv_sec, cash_spec->tv_nsec);
-    printf("Tiempo de ejecucion de cofm: %d segundos y %d nanosegundos\n",cof_spec->tv_sec, cof_spec->tv_nsec);
+    printf("Tiempo de ejecucion de cashm: %d segundos y %d nanosegundos\n",(int) cash_spec.tv_sec, (int) cash_spec.tv_nsec);
+    printf("Tiempo de ejecucion de cofm: %d segundos y %d nanosegundos\n",(int) cof_spec.tv_sec, (int) cof_spec.tv_nsec);
     timeval_add (&next_activation, &next_activation, &clk_period);
     delay_until (&next_activation);
   }
 
-  printf("Tiempo de ejecucion MAXIMO cashm: %d segundos y %d nanosegundos\n",cashmax_spec->tv_sec, cashmax_spec->tv_nsec);
-  printf("Tiempo de ejecucion MAXIMO de cofm: %d segundos y %d nanosegundos\n",cofmax_spec->tv_sec, cofmax_spec->tv_nsec);
+  printf("Tiempo de ejecucion MAXIMO cashm: %d segundos y %d nanosegundos\n",(int) cashmax_spec.tv_sec, (int) cashmax_spec.tv_nsec);
+  printf("Tiempo de ejecucion MAXIMO de cofm: %d segundos y %d nanosegundos\n",(int) cofmax_spec.tv_sec, (int) cofmax_spec.tv_nsec);
 
   return 0;
 	
