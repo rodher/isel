@@ -335,7 +335,7 @@ int main ()
 	int mon0;
 	int mon1;
 	int mon2;
-	int momento;
+	int momento=1;
 
   /*Variables para medida de tiempos*/
   struct timespec a_spec={0, 0};
@@ -346,11 +346,12 @@ int main ()
   struct timespec cofmax_spec={0, 0};
   
   gettimeofday (&next_activation, NULL);
-  while (timer!=-1) {
-    scanf("%d %d %d %d %d %d\n", &momento, &button, &timer, &mon2, &mon1, &mon0);
+  while (button!=-1) {
+    scanf("%d %d %d %d %d\n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
     printf("%d.\n", momento);
+    momento++;
 
     clock_gettime(CLOCK_MONOTONIC,&b_spec);
     fsm_fire (cashm_fsm);
