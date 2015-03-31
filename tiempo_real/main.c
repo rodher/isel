@@ -37,6 +37,8 @@ Febrero 2015
 
 #define PRECIO         50 // Expresado en centimos para poder trabajar con enteros
 
+#define N_CYCLES  3
+#define T_S       1000000
 
 static int dinero = 0; // Variable global que lleva la cuenta del dinero
 
@@ -306,8 +308,10 @@ void delay_until (struct timeval* next_activation)
 
 int main ()
 {
-  struct timeval clk_period = { 0, 250 * 1000 };
-  struct timeval next_activation;
+
+  constant struct timespec subperiod = {0, T_S};
+  struct timespec initial_time = {0,0};
+  struct timespec end_time = {0,0};
   fsm_t* cofm_fsm = fsm_new (cofm);
   fsm_t* cashm_fsm = fsm_new (cashm);
 
@@ -337,42 +341,39 @@ int main ()
 	int mon2;
 	int momento=1;
 
-  /*Variables para medida de tiempos*/
-  struct timespec a_spec={0, 0};
-  struct timespec b_spec={0, 0};
-  struct timespec cash_spec={0, 0};
-  struct timespec cof_spec={0, 0};
-  struct timespec cashmax_spec={0, 0};
-  struct timespec cofmax_spec={0, 0};
-  
-  gettimeofday (&next_activation, NULL);
+  int cycle = 0;
+
   while (button!=-1) {
+    clock_gettime(CLOCK_MONOTONIC, &initial_time);
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
-    printf("%d.\n", momento);
+    //printf("%d.\n", momento);
     momento++;
 
-    clock_gettime(CLOCK_MONOTONIC,&b_spec);
-    fsm_fire (cashm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,&a_spec);
-    timespec_sub(&cash_spec, &a_spec, &b_spec);
-    timespec_max(&cashmax_spec, &cashmax_spec, &cash_spec);
+    switch(cycle){
+      case 0 :
+        fsm_fire (cashm_fsm);
+        fsm_fire (cofm_fsm);
+        break;
+      case 1 :
+        fsm_fire (cashm_fsm);
+        break;
+      case 2 :
+        fsm_fire (cashm_fsm);
+        break;
+      default :
+        fsm_fire (cashm_fsm);
+        break;
+    }
 
-    clock_gettime(CLOCK_MONOTONIC,&b_spec);
-    fsm_fire (cofm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,&a_spec);
-    timespec_sub(&cof_spec, &a_spec, &b_spec);
-    timespec_max(&cofmax_spec, &cofmax_spec, &cof_spec);
+    cycle = (cycle+1)%N_CYCLES;
 
-    printf("Tiempo de ejecucion de cashm: %d segundos y %d nanosegundos\n",(int) cash_spec.tv_sec, (int) cash_spec.tv_nsec);
-    printf("Tiempo de ejecucion de cofm: %d segundos y %d nanosegundos\n",(int) cof_spec.tv_sec, (int) cof_spec.tv_nsec);
-    timeval_add (&next_activation, &next_activation, &clk_period);
-    delay_until (&next_activation);
+    timespec_add(&initial_time, &initial_time, &subperiod);
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+    timespec_sub(&end_time, &initial_time, &end_time);
+    nanosleep(&end_time, NULL);
   }
-
-  printf("Tiempo de ejecucion MAXIMO cashm: %d segundos y %d nanosegundos\n",(int) cashmax_spec.tv_sec, (int) cashmax_spec.tv_nsec);
-  printf("Tiempo de ejecucion MAXIMO de cofm: %d segundos y %d nanosegundos\n",(int) cofmax_spec.tv_sec, (int) cofmax_spec.tv_nsec);
 
   return 0;
 	
