@@ -346,7 +346,7 @@ int main ()
   struct timespec cofmax_spec={0, 0};
   
   gettimeofday (&next_activation, NULL);
-  while (timer!=-1) {
+  while (button!=-1) {
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
