@@ -309,7 +309,7 @@ void delay_until (struct timeval* next_activation)
 int main ()
 {
 
-  constant struct timespec subperiod = {0, T_S};
+  struct timespec subperiod = {0, T_S};
   struct timespec initial_time = {0,0};
   struct timespec end_time = {0,0};
   fsm_t* cofm_fsm = fsm_new (cofm);
