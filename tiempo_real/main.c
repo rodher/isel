@@ -342,7 +342,6 @@ int main ()
 	int mon0;
 	int mon1;
 	int mon2;
-	int momento=1;
 
   int cycle = 0;
 
@@ -351,8 +350,6 @@ int main ()
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
-    //printf("%d.\n", momento);
-    momento++;
 
     switch(cycle){
       case 0 :
