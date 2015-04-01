@@ -105,10 +105,8 @@ static void money_isr (void) {
 
 static int timer = 0;
 static void timer_isr (union sigval arg) { timer = 1; }
-static int count = 0;
-static int active_timer = 0;
 static void timer_start (int ms)
-{ /*
+{
   timer_t timerid;
   struct itimerspec value;
   struct sigevent se;
@@ -121,9 +119,7 @@ static void timer_start (int ms)
   value.it_interval.tv_sec = 0;
   value.it_interval.tv_nsec = 0;
   timer_create (CLOCK_REALTIME, &se, &timerid);
-  timer_settime (timerid, 0, &value, NULL);*/
-  active_timer = 1;
-  count = 1000000*ms;
+  timer_settime (timerid, 0, &value, NULL);
 }
 
 static int button_pressed (fsm_t* this)
@@ -372,16 +368,6 @@ int main ()
     }
 
     cycle = (cycle+1)%N_CYCLES;
-
-    if(active_timer){
-      count-=T_S;
-      if (count<=0)
-      {
-        count = 0;
-        active_timer = 0;
-        timer = 1;
-      }
-    }
 
     timespec_add(&initial_time, &initial_time, &subperiod);
     clock_gettime(CLOCK_MONOTONIC, &end_time);
