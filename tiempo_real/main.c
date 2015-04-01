@@ -366,8 +366,10 @@ int main ()
         fsm_fire (cashm_fsm);
         break;
     }
-
     cycle = (cycle+1)%N_CYCLES;
+
+    timeval_add (&next_activation, &next_activation, &clk_period);
+    delay_until (&next_activation);
 
     timespec_add(&initial_time, &initial_time, &subperiod);
     clock_gettime(CLOCK_MONOTONIC, &end_time);
