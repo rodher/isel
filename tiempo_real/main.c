@@ -345,8 +345,8 @@ int main ()
 
   int cycle = 0;
 
-  while (button!=-1) {
-    clock_gettime(CLOCK_MONOTONIC, &initial_time);
+  clock_gettime(CLOCK_MONOTONIC, &initial_time);
+  while (button!=-1) {  
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
@@ -367,9 +367,6 @@ int main ()
         break;
     }
     cycle = (cycle+1)%N_CYCLES;
-
-    timeval_add (&next_activation, &next_activation, &clk_period);
-    delay_until (&next_activation);
 
     timespec_add(&initial_time, &initial_time, &subperiod);
     clock_gettime(CLOCK_MONOTONIC, &end_time);
