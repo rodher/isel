@@ -308,10 +308,6 @@ void delay_until (struct timeval* next_activation)
 
 int main ()
 {
-
-  struct timeval clk_period = { 0, 250 * 1000 };
-  struct timeval next_activation;
-
   struct timespec subperiod = {0, T_S};
   struct timespec initial_time = {0,0};
   struct timespec end_time = {0,0};
