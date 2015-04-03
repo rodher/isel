@@ -221,7 +221,7 @@ static void getChange(fsm_t* this)
 
 
 // Explicit FSM description
-static fsm_trans_t cofm[] = {
+static const fsm_trans_t cofm[] = {
   { COFM_WAITING, button_pressed, COFM_CUP,     cup    },
   { COFM_CUP,     timer_finished, COFM_COFFEE,  coffee },
   { COFM_COFFEE,  timer_finished, COFM_MILK,    milk   },
@@ -229,79 +229,12 @@ static fsm_trans_t cofm[] = {
   {-1, NULL, -1, NULL },
 };
 
-static fsm_trans_t cashm[] = {
+static const fsm_trans_t cashm[] = {
   { COFM_MONEY, insert_coin, COFM_VUELTAS, enough_money},
   { COFM_VUELTAS, coffee_served, COFM_MONEY, getChange},   //DEVUELVE EL DINERO CUANDO HA ACABADO DE ECHAR LA LECHE
   {-1, NULL, -1, NULL },
 };
 
-
-
-
-// Utility functions, should be elsewhere
-
-// res = a - b
-void
-timeval_sub (struct timeval *res, struct timeval *a, struct timeval *b)
-{
-  res->tv_sec = a->tv_sec - b->tv_sec;
-  res->tv_usec = a->tv_usec - b->tv_usec;
-  if (res->tv_usec < 0) {
-    --res->tv_sec;
-    res->tv_usec += 1000000;
-  }
-}
-
-// res = a + b
-void
-timeval_add (struct timeval *res, struct timeval *a, struct timeval *b)
-{
-  res->tv_sec = a->tv_sec + b->tv_sec
-    + a->tv_usec / 1000000 + b->tv_usec / 1000000; 
-  res->tv_usec = a->tv_usec % 1000000 + b->tv_usec % 1000000;
-}
-
-// res = a - b
-void
-timespec_sub (struct timespec *res, struct timespec *a, struct timespec *b)
-{
-  res->tv_sec = a->tv_sec - b->tv_sec;
-  res->tv_nsec = a->tv_nsec - b->tv_nsec;
-  if (res->tv_nsec < 0) {
-    --res->tv_sec;
-    res->tv_nsec += 1000000000;
-  }
-}
-
-// res = a + b
-void
-timespec_add (struct timespec *res, struct timespec *a, struct timespec *b)
-{
-  res->tv_sec = a->tv_sec + b->tv_sec
-    + a->tv_nsec / 1000000000 + b->tv_nsec / 1000000000; 
-  res->tv_nsec = a->tv_nsec % 1000000000 + b->tv_nsec % 1000000000;
-}
-
-// max = max{a,b}
-void
-timespec_max (struct timespec *max, struct timespec *a, struct timespec *b)
-{
-  if(a->tv_sec > b->tv_sec) (*max)=(*a);
-  else if(a->tv_sec < b->tv_sec) (*max)=(*b);
-  else{
-    if(a->tv_nsec > b->tv_nsec) (*max)=(*a);
-    else (*max)=(*b);
-  }
-}
-
-// wait until next_activation (absolute time)
-void delay_until (struct timeval* next_activation)
-{
-  struct timeval now, timeout;
-  gettimeofday (&now, NULL);
-  timeval_sub (&timeout, next_activation, &now);
-  select (0, NULL, NULL, NULL, &timeout);
-}
 
 static fsm_t* cofm_fsm = fsm_new (cofm);
 static fsm_t* cashm_fsm = fsm_new (cashm);
@@ -310,7 +243,7 @@ static
 void
 coff_func (struct event_handler_t* this)
 {
-  static const struct timeval period = { 0, 1000 };
+  static struct timeval period = { 0, 1000 };
 
   fsm_fire (cofm_fsm); 
   
@@ -321,7 +254,7 @@ static
 void
 cash_func (struct event_handler_t* this)
 {
-  static const struct timeval period = { 0, 2400 };
+  static struct timeval period = { 0, 2400 };
 
   fsm_fire (cashm_fsm);
   
@@ -357,7 +290,6 @@ int main ()
 	int mon0;
 	int mon1;
 	int mon2;
-	int momento=1;
 
   EventHandler eh_coff, eh_cash;
   reactor_init ();
