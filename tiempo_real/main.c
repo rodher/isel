@@ -249,7 +249,6 @@ int main ()
   fsm_t* cofm_fsm = fsm_new (cofm);
   fsm_t* cashm_fsm = fsm_new (cashm);
 
-  static
   void
   coff_func (struct event_handler_t* this)
   {
@@ -260,7 +259,6 @@ int main ()
     timeval_add (&this->next_activation, &this->next_activation, &period);
   }
 
-  static
   void
   cash_func (struct event_handler_t* this)
   {
