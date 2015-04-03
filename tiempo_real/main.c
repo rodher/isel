@@ -221,7 +221,7 @@ static void getChange(fsm_t* this)
 
 
 // Explicit FSM description
-static const fsm_trans_t cofm[] = {
+static fsm_trans_t cofm[] = {
   { COFM_WAITING, button_pressed, COFM_CUP,     cup    },
   { COFM_CUP,     timer_finished, COFM_COFFEE,  coffee },
   { COFM_COFFEE,  timer_finished, COFM_MILK,    milk   },
@@ -229,42 +229,41 @@ static const fsm_trans_t cofm[] = {
   {-1, NULL, -1, NULL },
 };
 
-static const fsm_trans_t cashm[] = {
+static fsm_trans_t cashm[] = {
   { COFM_MONEY, insert_coin, COFM_VUELTAS, enough_money},
   { COFM_VUELTAS, coffee_served, COFM_MONEY, getChange},   //DEVUELVE EL DINERO CUANDO HA ACABADO DE ECHAR LA LECHE
   {-1, NULL, -1, NULL },
 };
 
 
-static fsm_t* cofm_fsm = fsm_new (cofm);
-static fsm_t* cashm_fsm = fsm_new (cashm);
-
-static
-void
-coff_func (struct event_handler_t* this)
-{
-  static struct timeval period = { 0, 1000 };
-
-  fsm_fire (cofm_fsm); 
-  
-  timeval_add (&this->next_activation, &this->next_activation, &period);
-}
-
-static
-void
-cash_func (struct event_handler_t* this)
-{
-  static struct timeval period = { 0, 2400 };
-
-  fsm_fire (cashm_fsm);
-  
-  timeval_add (&this->next_activation, &this->next_activation, &period);
-}
-
-
 
 int main ()
 {
+
+  fsm_t* cofm_fsm = fsm_new (cofm);
+  fsm_t* cashm_fsm = fsm_new (cashm);
+
+  static
+  void
+  coff_func (struct event_handler_t* this)
+  {
+    static struct timeval period = { 0, 1000 };
+
+    fsm_fire (cofm_fsm); 
+    
+    timeval_add (&this->next_activation, &this->next_activation, &period);
+  }
+
+  static
+  void
+  cash_func (struct event_handler_t* this)
+  {
+    static struct timeval period = { 0, 2400 };
+
+    fsm_fire (cashm_fsm);
+    
+    timeval_add (&this->next_activation, &this->next_activation, &period);
+  }
 
   wiringPiSetup();
   pinMode (GPIO_BUTTON, INPUT);
