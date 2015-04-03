@@ -303,7 +303,7 @@ int main ()
   reactor_add_handler (&eh_coff);
   reactor_add_handler (&eh_cash);
   
-  while (button!=-1) {
+  while (1) {
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
