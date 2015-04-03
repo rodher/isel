@@ -16,6 +16,12 @@ Febrero 2015
 #include "reactor.h"
 #include <stdio.h>
 
+#ifndef NDEBUG
+#define DEBUG(x) x
+#else
+#define DEBUG(x)
+#endif
+
 #define GPIO_BUTTON	2
 #define GPIO_LED	3
 #define GPIO_CUP	4
@@ -303,6 +309,9 @@ int main ()
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
+    DEBUG({
+      printf("Dinero: %d\n", dinero);
+    })
  
     reactor_handle_events ();
   }
