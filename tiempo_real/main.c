@@ -300,32 +300,30 @@ init_mutex (pthread_mutex_t* m)
   //   (&m, sched_get_priority_min (SCHED_FIFO) + prioceiling);
 }
 
-static fsm_t* cofm_fsm = fsm_new (cofm);
-static fsm_t* cashm_fsm = fsm_new (cashm);
-
-static
-void*
-coff_func (void* arg)
-{
-  while(1){
-    pthread_wait_np ((unsigned long*) arg);
-    fsm_fire (cofm_fsm);  
-  }
-}
-
-static
-void*
-cash_func (void* arg)
-{
-  while(1){
-    pthread_wait_np ((unsigned long*) arg);
-    fsm_fire (cashm_fsm);  
-  }
-}
-
 int main ()
 {
+  static fsm_t* cofm_fsm = fsm_new (cofm);
+  static fsm_t* cashm_fsm = fsm_new (cashm);
 
+  static
+  void*
+  coff_func (void* arg)
+  {
+    while(1){
+      pthread_wait_np ((unsigned long*) arg);
+      fsm_fire (cofm_fsm);  
+    }
+  }
+
+  static
+  void*
+  cash_func (void* arg)
+  {
+    while(1){
+      pthread_wait_np ((unsigned long*) arg);
+      fsm_fire (cashm_fsm);  
+    }
+  }
   wiringPiSetup();
   pinMode (GPIO_BUTTON, INPUT);
   pinMode (GPIO_MONEY0, INPUT);
