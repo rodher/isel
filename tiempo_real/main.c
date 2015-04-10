@@ -302,10 +302,9 @@ init_mutex (pthread_mutex_t* m)
 
 int main ()
 {
-  static fsm_t* cofm_fsm = fsm_new (cofm);
-  static fsm_t* cashm_fsm = fsm_new (cashm);
+  fsm_t* cofm_fsm = fsm_new (cofm);
+  fsm_t* cashm_fsm = fsm_new (cashm);
 
-  static
   void*
   coff_func (void* arg)
   {
@@ -315,7 +314,6 @@ int main ()
     }
   }
 
-  static
   void*
   cash_func (void* arg)
   {
