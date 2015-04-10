@@ -13,7 +13,14 @@ Febrero 2015
 #include <signal.h>
 #include <wiringPi.h>
 #include "fsm.h"
+#include "reactor.h"
 #include <stdio.h>
+
+#ifndef NDEBUG
+#define DEBUG(x) x
+#else
+#define DEBUG(x)
+#endif
 
 #define GPIO_BUTTON	2
 #define GPIO_LED	3
@@ -236,80 +243,31 @@ static fsm_trans_t cashm[] = {
 
 
 
-
-// Utility functions, should be elsewhere
-
-// res = a - b
-void
-timeval_sub (struct timeval *res, struct timeval *a, struct timeval *b)
-{
-  res->tv_sec = a->tv_sec - b->tv_sec;
-  res->tv_usec = a->tv_usec - b->tv_usec;
-  if (res->tv_usec < 0) {
-    --res->tv_sec;
-    res->tv_usec += 1000000;
-  }
-}
-
-// res = a + b
-void
-timeval_add (struct timeval *res, struct timeval *a, struct timeval *b)
-{
-  res->tv_sec = a->tv_sec + b->tv_sec
-    + a->tv_usec / 1000000 + b->tv_usec / 1000000; 
-  res->tv_usec = a->tv_usec % 1000000 + b->tv_usec % 1000000;
-}
-
-// res = a - b
-void
-timespec_sub (struct timespec *res, struct timespec *a, struct timespec *b)
-{
-  res->tv_sec = a->tv_sec - b->tv_sec;
-  res->tv_nsec = a->tv_nsec - b->tv_nsec;
-  if (res->tv_nsec < 0) {
-    --res->tv_sec;
-    res->tv_nsec += 1000000000;
-  }
-}
-
-// res = a + b
-void
-timespec_add (struct timespec *res, struct timespec *a, struct timespec *b)
-{
-  res->tv_sec = a->tv_sec + b->tv_sec
-    + a->tv_nsec / 1000000000 + b->tv_nsec / 1000000000; 
-  res->tv_nsec = a->tv_nsec % 1000000000 + b->tv_nsec % 1000000000;
-}
-
-// max = max{a,b}
-void
-timespec_max (struct timespec *max, struct timespec *a, struct timespec *b)
-{
-  if(a->tv_sec > b->tv_sec) (*max)=(*a);
-  else if(a->tv_sec < b->tv_sec) (*max)=(*b);
-  else{
-    if(a->tv_nsec > b->tv_nsec) (*max)=(*a);
-    else (*max)=(*b);
-  }
-}
-
-// wait until next_activation (absolute time)
-void delay_until (struct timeval* next_activation)
-{
-  struct timeval now, timeout;
-  gettimeofday (&now, NULL);
-  timeval_sub (&timeout, next_activation, &now);
-  select (0, NULL, NULL, NULL, &timeout);
-}
-
-
-
 int main ()
 {
-  struct timeval clk_period = { 0, 250 * 1000 };
-  struct timeval next_activation;
+
   fsm_t* cofm_fsm = fsm_new (cofm);
   fsm_t* cashm_fsm = fsm_new (cashm);
+
+  void
+  coff_func (struct event_handler_t* this)
+  {
+    static struct timeval period = { 0, 1000 };
+
+    fsm_fire (cofm_fsm); 
+    
+    timeval_add (&this->next_activation, &this->next_activation, &period);
+  }
+
+  void
+  cash_func (struct event_handler_t* this)
+  {
+    static struct timeval period = { 0, 2400 };
+
+    fsm_fire (cashm_fsm);
+    
+    timeval_add (&this->next_activation, &this->next_activation, &period);
+  }
 
   wiringPiSetup();
   pinMode (GPIO_BUTTON, INPUT);
@@ -335,44 +293,26 @@ int main ()
 	int mon0;
 	int mon1;
 	int mon2;
-	int momento=1;
 
-  /*Variables para medida de tiempos*/
-  struct timespec a_spec={0, 0};
-  struct timespec b_spec={0, 0};
-  struct timespec cash_spec={0, 0};
-  struct timespec cof_spec={0, 0};
-  struct timespec cashmax_spec={0, 0};
-  struct timespec cofmax_spec={0, 0};
+  EventHandler eh_coff, eh_cash;
+  reactor_init ();
+
+  event_handler_init (&eh_coff, 1, coff_func);
+  event_handler_init (&eh_cash, 2, cash_func);
+
+  reactor_add_handler (&eh_coff);
+  reactor_add_handler (&eh_cash);
   
-  gettimeofday (&next_activation, NULL);
-  while (button!=-1) {
+  while (1) {
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
-    printf("%d.\n", momento);
-    momento++;
-
-    clock_gettime(CLOCK_MONOTONIC,&b_spec);
-    fsm_fire (cashm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,&a_spec);
-    timespec_sub(&cash_spec, &a_spec, &b_spec);
-    timespec_max(&cashmax_spec, &cashmax_spec, &cash_spec);
-
-    clock_gettime(CLOCK_MONOTONIC,&b_spec);
-    fsm_fire (cofm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,&a_spec);
-    timespec_sub(&cof_spec, &a_spec, &b_spec);
-    timespec_max(&cofmax_spec, &cofmax_spec, &cof_spec);
-
-    printf("Tiempo de ejecucion de cashm: %d segundos y %d nanosegundos\n",(int) cash_spec.tv_sec, (int) cash_spec.tv_nsec);
-    printf("Tiempo de ejecucion de cofm: %d segundos y %d nanosegundos\n",(int) cof_spec.tv_sec, (int) cof_spec.tv_nsec);
-    timeval_add (&next_activation, &next_activation, &clk_period);
-    delay_until (&next_activation);
+    DEBUG({
+      printf("Dinero: %d\n", dinero);
+    })
+ 
+    reactor_handle_events ();
   }
-
-  printf("Tiempo de ejecucion MAXIMO cashm: %d segundos y %d nanosegundos\n",(int) cashmax_spec.tv_sec, (int) cashmax_spec.tv_nsec);
-  printf("Tiempo de ejecucion MAXIMO de cofm: %d segundos y %d nanosegundos\n",(int) cofmax_spec.tv_sec, (int) cofmax_spec.tv_nsec);
 
   return 0;
 	
