@@ -9,11 +9,12 @@ Febrero 2015
 
 #include <sys/select.h>
 #include <sys/time.h>
+#include <pthread.h>
 #include <time.h>
 #include <signal.h>
 #include <wiringPi.h>
 #include "fsm.h"
-#include "reactor.h"
+#include "tasks.h"
 #include <stdio.h>
 
 #ifndef NDEBUG
@@ -46,10 +47,13 @@ Febrero 2015
 
 
 static int dinero = 0; // Variable global que lleva la cuenta del dinero
+static pthread_mutex_t dinero_mutex;
 
 static int cobrar = 0; // Flag que indica al monedero que debemos cobrar:                         |<--|cobrar
+static pthread_mutex_t cobrar_mutex;
                                                                                       //MONEDERO  |   |   MAQUINA DE CAFE
 static int hay_dinero = 0;  // Flag con la que el monedero nos avisa de si hay dinero   hay_dinero|-->|
+static pthread_mutex_t hay_dinero_mutex;
 
 enum cofm_state {
   COFM_WAITING,
@@ -102,7 +106,6 @@ static void money_isr (void) {
       valor=0;
       break;
   }
-
   dinero+=valor;
   if(dinero>=PRECIO) money=1;
 }    //INTERRUPCIÓN PARA LA ENTRADA DE MONEDAS
@@ -130,10 +133,14 @@ static void timer_start (int ms)
 static int button_pressed (fsm_t* this)
 {
   int ret1 = button;
+  pthread_mutex_lock(&hay_dinero_mutex);
   int ret2 = hay_dinero;
+  pthread_mutex_unlock(&hay_dinero_mutex);
   if(ret1&&ret2){         // Comprueba que ambos se cumplen antes de resetearlos
     button  = 0;
+    pthread_mutex_lock(&hay_dinero_mutex);
     hay_dinero = 0;
+    pthread_mutex_unlock(&hay_dinero_mutex);
     return 1;
   } else return 0;
 }
@@ -147,7 +154,10 @@ static int insert_coin (fsm_t* this)
 
 static int coffee_served (fsm_t* this)
 {
-  return cobrar; // En este caso es la funcion de salida getChange la que resetea el flag de cobrar
+  pthread_mutex_lock (&cobrar_mutex);
+  int ret = cobrar;
+  pthread_mutex_unlock (&cobrar_mutex);
+  return ret; // En este caso es la funcion de salida getChange la que resetea el flag de cobrar
 }
 
 static int timer_finished (fsm_t* this)
@@ -182,19 +192,26 @@ static void finish (fsm_t* this)
 {
   digitalWrite (GPIO_MILK, LOW);
   digitalWrite (GPIO_LED, HIGH);
+  pthread_mutex_lock (&cobrar_mutex);
   cobrar = 1;
+  pthread_mutex_unlock (&cobrar_mutex);
+  pthread_mutex_lock(&dinero_mutex);
   dinero -= PRECIO;
+  pthread_mutex_unlock(&dinero_mutex);
 }
 
 static void enough_money(fsm_t* this)
 {
+  pthread_mutex_lock(&hay_dinero_mutex);
   hay_dinero = 1;
+  pthread_mutex_unlock(&hay_dinero_mutex);
 }
 
 static void getChange(fsm_t* this)
 { 
   // Estructura de control que va devolviendo el cambio. Cada "palanca devuelve-cambio" se activa por flanco
   // Quiza sea mas elegante usar un bucle y una estructura de arrays, pero esta forma es mas entendible
+  pthread_mutex_lock(&dinero_mutex);
   if(dinero>=200){
     dinero-=200;
     digitalWrite(GPIO_2E, HIGH);
@@ -220,9 +237,13 @@ static void getChange(fsm_t* this)
     digitalWrite(GPIO_5C, HIGH);
     digitalWrite(GPIO_5C, LOW);
   }
-  
   if(dinero>=0) this->current_state=COFM_VUELTAS;
-  else cobrar=0;
+  else{
+    pthread_mutex_lock (&cobrar_mutex);
+    cobrar=0;
+    pthread_mutex_unlock (&cobrar_mutex);
+  }
+  pthread_mutex_unlock(&dinero_mutex);
 }
 
 
@@ -241,33 +262,69 @@ static fsm_trans_t cashm[] = {
   {-1, NULL, -1, NULL },
 };
 
+static
+void
+create_task (pthread_t* tid, void *(*f)(void *), void* arg,
+             int period_ms, int prio, int stacksize)
+{
+  pthread_attr_t attr;
+  struct sched_param sparam;
+  struct timespec next_activation;
+  struct timespec period = { 0, 0L };
 
+  sparam.sched_priority = sched_get_priority_min (SCHED_FIFO) + prio;
+  clock_gettime (CLOCK_REALTIME, &next_activation);
+  next_activation.tv_sec += 1;
+  period.tv_sec  = period_ms / 1000;
+  period.tv_nsec = (period_ms % 1000) * 1000000L;
+
+  pthread_attr_init (&attr);
+  pthread_attr_setstacksize (&attr, stacksize);
+  pthread_attr_setscope (&attr, PTHREAD_SCOPE_SYSTEM);
+  pthread_attr_setschedpolicy (&attr, SCHED_FIFO);
+  pthread_attr_setschedparam (&attr, &sparam);
+  pthread_create (tid, &attr, f, arg);
+  pthread_make_periodic_np (pthread_self(), &next_activation, &period);
+}
+
+static
+void
+init_mutex (pthread_mutex_t* m)
+{
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init (&attr);
+  // pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_PROTECT);
+  pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
+  pthread_mutex_init (m, &attr);
+  // pthread_mutex_setprioceiling
+  //   (&m, sched_get_priority_min (SCHED_FIFO) + prioceiling);
+}
+
+static fsm_t* cofm_fsm = fsm_new (cofm);
+static fsm_t* cashm_fsm = fsm_new (cashm);
+
+static
+void*
+coff_func (void* arg)
+{
+  while(1){
+    pthread_wait_np ((unsigned long*) arg);
+    fsm_fire (cofm_fsm);  
+  }
+}
+
+static
+void*
+cash_func (void* arg)
+{
+  while(1){
+    pthread_wait_np ((unsigned long*) arg);
+    fsm_fire (cashm_fsm);  
+  }
+}
 
 int main ()
 {
-
-  fsm_t* cofm_fsm = fsm_new (cofm);
-  fsm_t* cashm_fsm = fsm_new (cashm);
-
-  void
-  coff_func (struct event_handler_t* this)
-  {
-    static struct timeval period = { 0, 1000 };
-
-    fsm_fire (cofm_fsm); 
-    
-    timeval_add (&this->next_activation, &this->next_activation, &period);
-  }
-
-  void
-  cash_func (struct event_handler_t* this)
-  {
-    static struct timeval period = { 0, 2400 };
-
-    fsm_fire (cashm_fsm);
-    
-    timeval_add (&this->next_activation, &this->next_activation, &period);
-  }
 
   wiringPiSetup();
   pinMode (GPIO_BUTTON, INPUT);
@@ -294,26 +351,23 @@ int main ()
 	int mon1;
 	int mon2;
 
-  EventHandler eh_coff, eh_cash;
-  reactor_init ();
+  pthread_t tcoff, tcash;
+  void* ret;
 
-  event_handler_init (&eh_coff, 1, coff_func);
-  event_handler_init (&eh_cash, 2, cash_func);
+  init_mutex (&dinero_mutex);
+  init_mutex (&hay_dinero_mutex);
+  init_mutex (&cobrar_mutex);
+  create_task (&tcoff, coff_func, NULL, 1, 2, 1024);
+  create_task (&tcash, cash_func, NULL, 3, 1, 1024);
 
-  reactor_add_handler (&eh_coff);
-  reactor_add_handler (&eh_cash);
+  pthread_join(tcoff, &ret);
+  pthread_join(tcash, &ret);
   
   while (1) {
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
-    DEBUG({
-      printf("Dinero: %d\n", dinero);
-    })
- 
-    reactor_handle_events ();
   }
 
   return 0;
-	
 }
