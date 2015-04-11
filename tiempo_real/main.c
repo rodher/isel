@@ -304,6 +304,12 @@ init_mutex (pthread_mutex_t* m)
 
 int main ()
 {
+
+  /*Variables para pruebas*/
+  int mon0;
+  int mon1;
+  int mon2;
+
   fsm_t* cofm_fsm = fsm_new (cofm);
   fsm_t* cashm_fsm = fsm_new (cashm);
 
@@ -355,11 +361,6 @@ int main ()
   pinMode (GPIO_1E, OUTPUT);
   pinMode (GPIO_2E, OUTPUT);
   digitalWrite (GPIO_LED, HIGH);
-
-	/*Variables para pruebas*/
-	int mon0;
-	int mon1;
-	int mon2;
 
   pthread_t tcoff, tcash, tinput;
   void* ret;
