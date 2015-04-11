@@ -77,6 +77,7 @@ enum monedas{   //Tipo de monedas que acepta la máquina
 };
 
 static int button = 0;
+static pthread_mutex_t button_mutex;
 static void button_isr (void) { button = 1; }
 
 static int money = 0;
@@ -134,12 +135,16 @@ static void timer_start (int ms)
 
 static int button_pressed (fsm_t* this)
 {
+  pthread_mutex_lock(&button_mutex);
   int ret1 = button;
+  pthread_mutex_unlock(&button_mutex);
   pthread_mutex_lock(&hay_dinero_mutex);
   int ret2 = hay_dinero;
   pthread_mutex_unlock(&hay_dinero_mutex);
   if(ret1&&ret2){         // Comprueba que ambos se cumplen antes de resetearlos
+    pthread_mutex_lock(&button_mutex);
     button  = 0;
+    pthread_mutex_unlock(&button_mutex);
     pthread_mutex_lock(&hay_dinero_mutex);
     hay_dinero = 0;
     pthread_mutex_unlock(&hay_dinero_mutex);
@@ -336,7 +341,9 @@ int main ()
   {
     while(1){
       pthread_wait_np ((unsigned long*) arg);
+      pthread_mutex_lock(&button_mutex);
       scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
+      pthread_mutex_unlock(&button_mutex);
       actualizaMoney(mon0, mon1, mon2);
       money_isr();
     }
@@ -368,6 +375,7 @@ int main ()
   init_mutex (&dinero_mutex);
   init_mutex (&hay_dinero_mutex);
   init_mutex (&cobrar_mutex);
+  init_mutex (&button_mutex);
   create_task (&tcoff, coff_func, NULL,   1, 2, 1024);
   create_task (&tcash, cash_func, NULL,   3, 1, 1024);
   create_task (&tinput, input_func, NULL, 100, 3, 1024);
