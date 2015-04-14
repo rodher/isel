@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=$(xeno-config --skin posix --cflags)
-LDFLAGS=$(xeno-config --skin posix --ldlibs)
+CFLAGS=$(shell xeno-config --skin posix --cflags)
+LDFLAGS=$(shell xeno-config --skin posix --ldlibs)
 LDLIBS= #-lwiringPi
 
 all: main
