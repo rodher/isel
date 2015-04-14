@@ -106,10 +106,8 @@ static void money_isr (void) {
       valor=0;
       break;
   }
-  pthread_mutex_lock(&dinero_mutex);
   dinero+=valor;
   if(dinero>=PRECIO) money=1;
-  pthread_mutex_unlock(&dinero_mutex);
 }    //INTERRUPCIÓN PARA LA ENTRADA DE MONEDAS
 
 
@@ -324,18 +322,6 @@ int main ()
       fsm_fire (cashm_fsm);  
     }
   }
-
-  void*
-  input_func (void* arg)
-  {
-    while(1){
-      pthread_wait_np ((unsigned long*) arg);
-      scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
-      actualizaMoney(mon0, mon1, mon2);
-      money_isr();
-    }
-  }
-
   wiringPiSetup();
   pinMode (GPIO_BUTTON, INPUT);
   pinMode (GPIO_MONEY0, INPUT);
@@ -361,19 +347,23 @@ int main ()
 	int mon1;
 	int mon2;
 
-  pthread_t tcoff, tcash, tinput;
+  pthread_t tcoff, tcash;
   void* ret;
 
   init_mutex (&dinero_mutex);
   init_mutex (&hay_dinero_mutex);
   init_mutex (&cobrar_mutex);
-  create_task (&tcoff, coff_func, NULL,   1, 2, 1024);
-  create_task (&tcash, cash_func, NULL,   3, 1, 1024);
-  create_task (&tinput, input_func, NULL, 100, 3, 1024);
+  create_task (&tcoff, coff_func, NULL, 1, 2, 1024);
+  create_task (&tcash, cash_func, NULL, 3, 1, 1024);
 
   pthread_join(tcoff, &ret);
   pthread_join(tcash, &ret);
-  pthread_join(tinput, &ret);
+  
+  while (1) {
+    scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
+    actualizaMoney(mon0, mon1, mon2);
+    money_isr();
+  }
 
   return 0;
 }
