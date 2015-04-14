@@ -12,7 +12,7 @@ void task_register_time (pthread_t tid, struct timeval *time);
 struct timeval *task_get_period (pthread_t tid);
 struct timeval *task_get_deadline (pthread_t tid);
 
-void mutex_init (pthread_mutex_t* m, int prioceiling);
+void mutex_init (pthread_mutex_t* m);
 
 void timeval_sub (struct timeval *res, struct timeval *a, struct timeval *b);
 void timeval_add (struct timeval *res, struct timeval *a, struct timeval *b);
