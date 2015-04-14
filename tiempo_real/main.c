@@ -356,8 +356,8 @@ int main ()
   create_task (&tcoff, coff_func, NULL, 1, 2, 1024);
   create_task (&tcash, cash_func, NULL, 3, 1, 1024);
 
-  pthread_join(tcoff, &ret);
-  pthread_join(tcash, &ret);
+  //pthread_join(tcoff, &ret);
+  //pthread_join(tcash, &ret);
   
   while (1) {
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
