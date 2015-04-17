@@ -346,6 +346,7 @@ int main ()
 	int mon0;
 	int mon1;
 	int mon2;
+  int but_edge = 0;
 
   pthread_t tcoff, tcash;
   void* ret;
@@ -361,6 +362,7 @@ int main ()
   
   while (1) {
     scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
+    if(but_edge) button_isr();
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
   }
