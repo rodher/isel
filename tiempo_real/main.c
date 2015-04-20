@@ -349,7 +349,7 @@ int main ()
   //pthread_join(tcash, &ret);
   
   while (1) {
-    scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
+    scanf("%d %d %d %d \n", &but_edge, &mon2, &mon1, &mon0);
     if(but_edge) button_isr();
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
