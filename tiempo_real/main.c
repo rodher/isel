@@ -225,7 +225,7 @@ static void getChange(fsm_t* this)
     digitalWrite(GPIO_5C, HIGH);
     digitalWrite(GPIO_5C, LOW);
   }
-  if(dinero>=0) this->current_state=COFM_VUELTAS;
+  if(dinero>0) this->current_state=COFM_VUELTAS;
   else{
     //pthread_mutex_lock (&cobrar_mutex);
     cobrar=0;
