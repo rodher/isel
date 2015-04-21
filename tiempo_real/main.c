@@ -342,8 +342,8 @@ int main ()
   init_mutex (&dinero_mutex);
   //init_mutex (&hay_dinero_mutex);
   //init_mutex (&cobrar_mutex);
-  create_task (&tcoff, coff_func, NULL, 1, 2, 1024);
-  create_task (&tcash, cash_func, NULL, 3, 1, 1024);
+  create_task (&tcoff, coff_func, NULL, 3, 1, 1024);
+  create_task (&tcash, cash_func, NULL, 1, 2, 1024);
 
   //pthread_join(tcoff, &ret);
   //pthread_join(tcash, &ret);
