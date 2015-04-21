@@ -1,7 +1,7 @@
 /*
 
 PRACTICA 1 DE ISEL CURSO 2014/2015
-Autores: Rodrigo Hernangomez Herrero y Ana Jimenez Valbuena
+Autores: Rodrigo Hernangomez Herrero
 Febrero 2015
 
 */
@@ -216,7 +216,7 @@ static void getChange(fsm_t* this)
     digitalWrite(GPIO_5C, LOW);
   }
   
-  if(dinero>=0) this->current_state=COFM_VUELTAS;
+  if(dinero>0) this->current_state=COFM_VUELTAS;
   else cobrar=0;
 }
 
