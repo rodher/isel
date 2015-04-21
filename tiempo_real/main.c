@@ -110,6 +110,38 @@ static void money_isr (void) {
   if(dinero>=PRECIO) money=1;
 }    //INTERRUPCIÓN PARA LA ENTRADA DE MONEDAS
 
+// res = a - b
+void
+timespec_sub (struct timespec *res, struct timespec *a, struct timespec *b)
+{
+  res->tv_sec = a->tv_sec - b->tv_sec;
+  res->tv_nsec = a->tv_nsec - b->tv_nsec;
+  if (res->tv_nsec < 0) {
+    --res->tv_sec;
+    res->tv_nsec += 1000000000;
+  }
+}
+
+// res = a + b
+void
+timespec_add (struct timespec *res, struct timespec *a, struct timespec *b)
+{
+  res->tv_sec = a->tv_sec + b->tv_sec
+    + a->tv_nsec / 1000000000 + b->tv_nsec / 1000000000; 
+  res->tv_nsec = a->tv_nsec % 1000000000 + b->tv_nsec % 1000000000;
+}
+
+// max = max{a,b}
+void
+timespec_max (struct timespec *max, struct timespec *a, struct timespec *b)
+{
+  if(a->tv_sec > b->tv_sec) (*max)=(*a);
+  else if(a->tv_sec < b->tv_sec) (*max)=(*b);
+  else{
+    if(a->tv_nsec > b->tv_nsec) (*max)=(*a);
+    else (*max)=(*b);
+  }
+}
 
 static int timer = 0;
 static void timer_start (int ms)
@@ -176,16 +208,26 @@ static void milk (fsm_t* this)
   timer_start (MILK_TIME);
 }
 
+static struct timespec finish_spec={0, 0};
 static void finish (fsm_t* this)
 {
+  struct timespec a_spec={0, 0};
+  struct timespec b_spec={0, 0};
+  struct timespec c_spec={0, 0};
+
   digitalWrite (GPIO_MILK, LOW);
   digitalWrite (GPIO_LED, HIGH);
   //pthread_mutex_lock (&cobrar_mutex);
   cobrar = 1;
   //pthread_mutex_unlock (&cobrar_mutex);
   pthread_mutex_lock(&dinero_mutex);
+  clock_gettime(CLOCK_MONOTONIC,&b_spec);
   dinero -= PRECIO;
+  clock_gettime(CLOCK_MONOTONIC,&a_spec);
   pthread_mutex_unlock(&dinero_mutex);
+  timespec_sub(&c_spec, &a_spec, &b_spec);
+  timespec_max(&finish_spec, &finish_spec, &c_spec);
+  printf("Tiempo de acceso a dinero en finish: %d segundos y %d nanosegundos\n",(int) c_spec.tv_sec, (int) c_spec.tv_nsec);
 }
 
 static void enough_money(fsm_t* this)
@@ -195,11 +237,16 @@ static void enough_money(fsm_t* this)
   //pthread_mutex_unlock(&hay_dinero_mutex);
 }
 
+static struct timespec getChange_spec={0, 0};
 static void getChange(fsm_t* this)
 { 
+  struct timespec a_spec={0, 0};
+  struct timespec b_spec={0, 0};
+  struct timespec c_spec={0, 0};
   // Estructura de control que va devolviendo el cambio. Cada "palanca devuelve-cambio" se activa por flanco
   // Quiza sea mas elegante usar un bucle y una estructura de arrays, pero esta forma es mas entendible
   pthread_mutex_lock(&dinero_mutex);
+  clock_gettime(CLOCK_MONOTONIC,&b_spec);
   if(dinero>=200){
     dinero-=200;
     digitalWrite(GPIO_2E, HIGH);
@@ -231,7 +278,11 @@ static void getChange(fsm_t* this)
     cobrar=0;
     //pthread_mutex_unlock (&cobrar_mutex);
   }
+  clock_gettime(CLOCK_MONOTONIC,&a_spec);
   pthread_mutex_unlock(&dinero_mutex);
+  timespec_sub(&c_spec, &a_spec, &b_spec);
+  timespec_max(&getChange_spec, &getChange_spec, &c_spec);
+  printf("Tiempo de acceso a dinero en getChange: %d segundos y %d nanosegundos\n",(int) c_spec.tv_sec, (int) c_spec.tv_nsec);
 }
 
 
@@ -348,12 +399,15 @@ int main ()
   //pthread_join(tcoff, &ret);
   //pthread_join(tcash, &ret);
   
-  while (1) {
+  while (but_edge!=-1) {
     scanf("%d %d %d %d \n", &but_edge, &mon2, &mon1, &mon0);
     if(but_edge) button_isr();
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
   }
+
+  printf("Tiempo de mutex máximo en finish: %d segundos y %d nanosegundos\n",(int) finish_spec.tv_sec, (int) finish_spec.tv_nsec);
+  printf("Tiempo de mutex máximo en getChange: %d segundos y %d nanosegundos\n",(int) getChange_spec.tv_sec, (int) getChange_spec.tv_nsec);
 
   return 0;
 }
