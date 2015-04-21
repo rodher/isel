@@ -50,10 +50,10 @@ static int dinero = 0; // Variable global que lleva la cuenta del dinero
 static pthread_mutex_t dinero_mutex;
 
 static int cobrar = 0; // Flag que indica al monedero que debemos cobrar:                         |<--|cobrar
-static pthread_mutex_t cobrar_mutex;
+//static pthread_mutex_t cobrar_mutex;
                                                                                       //MONEDERO  |   |   MAQUINA DE CAFE
 static int hay_dinero = 0;  // Flag con la que el monedero nos avisa de si hay dinero   hay_dinero|-->|
-static pthread_mutex_t hay_dinero_mutex;
+//static pthread_mutex_t hay_dinero_mutex;
 
 enum cofm_state {
   COFM_WAITING,
@@ -121,14 +121,14 @@ static void timer_start (int ms)
 static int button_pressed (fsm_t* this)
 {
   int ret1 = button;
-  pthread_mutex_lock(&hay_dinero_mutex);
+  //pthread_mutex_lock(&hay_dinero_mutex);
   int ret2 = hay_dinero;
-  pthread_mutex_unlock(&hay_dinero_mutex);
+  //pthread_mutex_unlock(&hay_dinero_mutex);
   if(ret1&&ret2){         // Comprueba que ambos se cumplen antes de resetearlos
     button  = 0;
-    pthread_mutex_lock(&hay_dinero_mutex);
+    //pthread_mutex_lock(&hay_dinero_mutex);
     hay_dinero = 0;
-    pthread_mutex_unlock(&hay_dinero_mutex);
+    //pthread_mutex_unlock(&hay_dinero_mutex);
     return 1;
   } else return 0;
 }
@@ -142,9 +142,9 @@ static int insert_coin (fsm_t* this)
 
 static int coffee_served (fsm_t* this)
 {
-  pthread_mutex_lock (&cobrar_mutex);
+  //pthread_mutex_lock (&cobrar_mutex);
   int ret = cobrar;
-  pthread_mutex_unlock (&cobrar_mutex);
+  //pthread_mutex_unlock (&cobrar_mutex);
   return ret; // En este caso es la funcion de salida getChange la que resetea el flag de cobrar
 }
 
@@ -180,9 +180,9 @@ static void finish (fsm_t* this)
 {
   digitalWrite (GPIO_MILK, LOW);
   digitalWrite (GPIO_LED, HIGH);
-  pthread_mutex_lock (&cobrar_mutex);
+  //pthread_mutex_lock (&cobrar_mutex);
   cobrar = 1;
-  pthread_mutex_unlock (&cobrar_mutex);
+  //pthread_mutex_unlock (&cobrar_mutex);
   pthread_mutex_lock(&dinero_mutex);
   dinero -= PRECIO;
   pthread_mutex_unlock(&dinero_mutex);
@@ -190,9 +190,9 @@ static void finish (fsm_t* this)
 
 static void enough_money(fsm_t* this)
 {
-  pthread_mutex_lock(&hay_dinero_mutex);
+  //pthread_mutex_lock(&hay_dinero_mutex);
   hay_dinero = 1;
-  pthread_mutex_unlock(&hay_dinero_mutex);
+  //pthread_mutex_unlock(&hay_dinero_mutex);
 }
 
 static void getChange(fsm_t* this)
@@ -227,9 +227,9 @@ static void getChange(fsm_t* this)
   }
   if(dinero>=0) this->current_state=COFM_VUELTAS;
   else{
-    pthread_mutex_lock (&cobrar_mutex);
+    //pthread_mutex_lock (&cobrar_mutex);
     cobrar=0;
-    pthread_mutex_unlock (&cobrar_mutex);
+    //pthread_mutex_unlock (&cobrar_mutex);
   }
   pthread_mutex_unlock(&dinero_mutex);
 }
@@ -340,8 +340,8 @@ int main ()
   void* ret;
 
   init_mutex (&dinero_mutex);
-  init_mutex (&hay_dinero_mutex);
-  init_mutex (&cobrar_mutex);
+  //init_mutex (&hay_dinero_mutex);
+  //init_mutex (&cobrar_mutex);
   create_task (&tcoff, coff_func, NULL, 1, 2, 1024);
   create_task (&tcash, cash_func, NULL, 3, 1, 1024);
 
