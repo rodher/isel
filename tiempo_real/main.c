@@ -1,7 +1,7 @@
 /*
 
 PRACTICA 1 DE ISEL CURSO 2014/2015
-Autores: Rodrigo Hernangomez Herrero y Ana Jimenez Valbuena
+Autores: Rodrigo Hernangomez Herrero
 Febrero 2015
 
 */
@@ -252,7 +252,7 @@ int main ()
   void
   coff_func (struct event_handler_t* this)
   {
-    static struct timeval period = { 0, 1000 };
+    static struct timeval period = { 0, 3000 };
 
     fsm_fire (cofm_fsm); 
     
@@ -262,7 +262,7 @@ int main ()
   void
   cash_func (struct event_handler_t* this)
   {
-    static struct timeval period = { 0, 2400 };
+    static struct timeval period = { 0, 1000 };
 
     fsm_fire (cashm_fsm);
     
