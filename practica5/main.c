@@ -158,7 +158,7 @@ int main()
 
   int k;
   gettimeofday (&next_activation, NULL);
-  for (k= 0; k < 10000; ++k)
+  for (k= 0; k < 200; ++k)
   {
     DEBUG(infrared = 1;)
     clock_gettime(CLOCK_MONOTONIC,&b_spec);
