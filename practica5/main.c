@@ -92,7 +92,7 @@ static int ir_triggered (fsm_t* this)
   return ret;
 }
 
-static void draw_display(fsm_t* this)
+static void draw_display(led_fsm_t* this)
 {
   int i,j;
   struct timeval next_activation;
