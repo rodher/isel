@@ -131,6 +131,12 @@ int main()
   struct timeval clk_period = { 0, 1000000/FREQUENCY };
   struct timeval next_activation;
 
+  /*Variables para medida de tiempos*/
+  struct timespec a_spec={0, 0};
+  struct timespec b_spec={0, 0};
+  struct timespec ledm_spec={0, 0};
+  struct timespec ledmax_spec={0, 0};
+
   wiringPiSetup();
   pinMode (GPIO_IR, INPUT);
   wiringPiISR (GPIO_IR, INT_EDGE_FALLING, infrared_isr);
@@ -150,15 +156,23 @@ int main()
 
   writeX(display);
 
+  int k;
   gettimeofday (&next_activation, NULL);
-  while (1) {
+  for (k= 0; k < 10000; ++k)
+  {
     DEBUG(infrared = 1;)
+    clock_gettime(CLOCK_MONOTONIC,&b_spec);
     fsm_fire ( (fsm_t*) ledm_fsm);
+    clock_gettime(CLOCK_MONOTONIC,&a_spec);
+    timespec_sub(&ledm_spec, &a_spec, &b_spec);
+    timespec_max(&ledmax_spec, &ledmax_spec, &ledm_spec);
     timeval_add (&next_activation, &next_activation, &clk_period);
     delay_until (&next_activation);
   }
 
   free_display(display);
+
+  printf("Tiempo de ejecucion máximo en pintar LEDs: %d segundos y %d nanosegundos\n",(int) ledmax_spec.tv_sec, (int) ledmax_spec.tv_nsec);
 
   return 0;
 }
