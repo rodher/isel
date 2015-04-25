@@ -18,7 +18,7 @@
 #define GPIO_LED5 5
 #define GPIO_LED6 6
 
-#define FREQUENCY 9
+#define FREQUENCY 1
 
 #define SWEEP_US (1000000/(2*FREQUENCY))
 
@@ -92,7 +92,7 @@ static int ir_triggered (fsm_t* this)
   return ret;
 }
 
-static void draw_display(led_fsm_t* this)
+static void draw_display(fsm_t* this)
 {
   int i,j;
   struct timeval next_activation;
@@ -118,7 +118,7 @@ static fsm_trans_t ledm[] = {
 
 int main()
 {
-  struct timeval clk_period = { 0, 250 * 1000 };
+  struct timeval clk_period = { 0, 1000 * 1000 };
   struct timeval next_activation;
 
   wiringPiSetup();
@@ -142,7 +142,8 @@ int main()
 
   gettimeofday (&next_activation, NULL);
   while (1) {
-    fsm_fire (ledm_fsm);
+    infrared = 1;
+    fsm_fire ( (fsm_t*) ledm_fsm);
     timeval_add (&next_activation, &next_activation, &clk_period);
     delay_until (&next_activation);
   }
