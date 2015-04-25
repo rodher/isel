@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/select.h>
 #include <sys/time.h>
 #include <time.h>
@@ -25,7 +26,7 @@
 #define N_ROW 7
 #define NUM_WIDTH 4
 #define N_DIGITS 6
-#define N_COL ((NUM_WIDTH+1)*N_DIGITS-1)
+#define N_COL 7 //((NUM_WIDTH+1)*N_DIGITS-1)
 
 #define COL_TIME (SWEEP_US/N_COL)
 
@@ -77,9 +78,9 @@ void writeX(display_t* this){
   int col3[N_ROW] = {0, 0, 1, 0, 1, 0, 0};
   int col4[N_ROW] = {0, 0, 0, 1, 0, 0, 0};
 
-  int* x[N_COL]={col1, col2, col3, col4, col3, col2, col1};
+  int* x[7]={col1, col2, col3, col4, col3, col2, col1};
 
-  write_display(this, x, N_COL);
+  write_display(this, x, 7);
 }
 
 static int infrared= 0;
@@ -112,7 +113,7 @@ static void draw_display(led_fsm_t* this)
 
 // Explicit FSM description
 static fsm_trans_t ledm[] = {
-  { LEDM_WAIT, ir_triggered, LEDM_WAIT, draw_display },
+  { LEDM_WAIT, ir_triggered, LEDM_WAIT, (fsm_output_func_t) draw_display },
   {-1, NULL, -1, NULL },
 };
 
