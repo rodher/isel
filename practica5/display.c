@@ -86,7 +86,7 @@ void show_display(display_t* this){
 	}
 }
 
-int write(display_t* this, int** figure, int width){
+int write_display(display_t* this, int** figure, int width){
 	int k;
 	for (k = 0; k < width; ++k)
 	{

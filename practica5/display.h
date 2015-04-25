@@ -15,6 +15,6 @@ int writeLine(display_t* this, int* line);
 int writeSpace(display_t* this);
 void clear_display(display_t* this);
 void show_display(display_t* this);
-int write(display_t* this, int** figure, int width);
+int write_display(display_t* this, int** figure, int width);
 
 #endif

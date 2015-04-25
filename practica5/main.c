@@ -79,7 +79,7 @@ void writeX(display_t* this){
 
   int* x[N_COL]={col1, col2, col3, col4, col3, col2, col1};
 
-  write(this, x, N_COL);
+  write_display(this, x, N_COL);
 }
 
 static int infrared= 0;
