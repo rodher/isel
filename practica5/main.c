@@ -19,17 +19,22 @@
 #define GPIO_LED5 5
 #define GPIO_LED6 6
 
-#define FREQUENCY 1
+#define FREQUENCY 9
 
 #define SWEEP_US (1000000/(2*FREQUENCY))
 
 #define N_ROW 7
 #define NUM_WIDTH 4
 #define N_DIGITS 6
-#define N_COL 7 //((NUM_WIDTH+1)*N_DIGITS-1)
+#define N_COL ((NUM_WIDTH+1)*N_DIGITS-1)
 
 #define COL_TIME (SWEEP_US/N_COL)
 
+#ifndef NDEBUG
+  #define DEBUG(x) x
+#else 
+  #define DEBUG(x)
+#endif
 
 static int       topCol[N_ROW] = {1,0,0,0,0,0,0};
 static int    centerCol[N_ROW] = {0,0,0,1,0,0,0};
@@ -109,6 +114,10 @@ static void draw_display(led_fsm_t* this)
     timeval_add (&next_activation, &next_activation, &delay);
     delay_until (&next_activation);
   }
+  for (j = 0; j < this->display->nRow; ++j)
+  {
+    digitalWrite(this->leds[j], 0);
+  }
 }
 
 // Explicit FSM description
@@ -119,7 +128,7 @@ static fsm_trans_t ledm[] = {
 
 int main()
 {
-  struct timeval clk_period = { 0, 1000 * 1000 };
+  struct timeval clk_period = { 0, 1000000/FREQUENCY };
   struct timeval next_activation;
 
   wiringPiSetup();
@@ -143,7 +152,7 @@ int main()
 
   gettimeofday (&next_activation, NULL);
   while (1) {
-    infrared = 1;
+    DEBUG(infrared = 1;)
     fsm_fire ( (fsm_t*) ledm_fsm);
     timeval_add (&next_activation, &next_activation, &clk_period);
     delay_until (&next_activation);
