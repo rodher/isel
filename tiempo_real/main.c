@@ -1,7 +1,7 @@
 /*
 
 PRACTICA 1 DE ISEL CURSO 2014/2015
-Autores: Rodrigo Hernangomez Herrero y Ana Jimenez Valbuena
+Autores: Rodrigo Hernangomez Herrero
 Febrero 2015
 
 */
@@ -37,6 +37,8 @@ Febrero 2015
 
 #define PRECIO         50 // Expresado en centimos para poder trabajar con enteros
 
+#define N_CYCLES  3
+#define T_S       1000000
 
 static int dinero = 0; // Variable global que lleva la cuenta del dinero
 
@@ -105,7 +107,6 @@ static int timer = 0;
 static void timer_isr (union sigval arg) { timer = 1; }
 static void timer_start (int ms)
 {
-  /*
   timer_t timerid;
   struct itimerspec value;
   struct sigevent se;
@@ -119,7 +120,6 @@ static void timer_start (int ms)
   value.it_interval.tv_nsec = 0;
   timer_create (CLOCK_REALTIME, &se, &timerid);
   timer_settime (timerid, 0, &value, NULL);
-  */
 }
 
 static int button_pressed (fsm_t* this)
@@ -216,7 +216,7 @@ static void getChange(fsm_t* this)
     digitalWrite(GPIO_5C, LOW);
   }
   
-  if(dinero>=0) this->current_state=COFM_VUELTAS;
+  if(dinero>0) this->current_state=COFM_VUELTAS;
   else cobrar=0;
 }
 
@@ -262,6 +262,39 @@ timeval_add (struct timeval *res, struct timeval *a, struct timeval *b)
   res->tv_usec = a->tv_usec % 1000000 + b->tv_usec % 1000000;
 }
 
+// res = a - b
+void
+timespec_sub (struct timespec *res, struct timespec *a, struct timespec *b)
+{
+  res->tv_sec = a->tv_sec - b->tv_sec;
+  res->tv_nsec = a->tv_nsec - b->tv_nsec;
+  if (res->tv_nsec < 0) {
+    --res->tv_sec;
+    res->tv_nsec += 1000000000;
+  }
+}
+
+// res = a + b
+void
+timespec_add (struct timespec *res, struct timespec *a, struct timespec *b)
+{
+  res->tv_sec = a->tv_sec + b->tv_sec
+    + a->tv_nsec / 1000000000 + b->tv_nsec / 1000000000; 
+  res->tv_nsec = a->tv_nsec % 1000000000 + b->tv_nsec % 1000000000;
+}
+
+// max = max{a,b}
+void
+timespec_max (struct timespec *max, struct timespec *a, struct timespec *b)
+{
+  if(a->tv_sec > b->tv_sec) (*max)=(*a);
+  else if(a->tv_sec < b->tv_sec) (*max)=(*b);
+  else{
+    if(a->tv_nsec > b->tv_nsec) (*max)=(*a);
+    else (*max)=(*b);
+  }
+}
+
 // wait until next_activation (absolute time)
 void delay_until (struct timeval* next_activation)
 {
@@ -275,8 +308,9 @@ void delay_until (struct timeval* next_activation)
 
 int main ()
 {
-  //struct timeval clk_period = { 0, 250 * 1000 };
-  //struct timeval next_activation;
+  struct timespec subperiod = {0, T_S};
+  struct timespec initial_time = {0,0};
+  struct timespec end_time = {0,0};
   fsm_t* cofm_fsm = fsm_new (cofm);
   fsm_t* cashm_fsm = fsm_new (cashm);
 
@@ -304,18 +338,36 @@ int main ()
 	int mon0;
 	int mon1;
 	int mon2;
-	int momento;
-  
-  //gettimeofday (&next_activation, NULL);
-  while (timer!=-1) {
-    scanf("%d %d %d %d %d %d\n", &momento, &button, &timer, &mon2, &mon1, &mon0);
+
+  int cycle = 0;
+
+  clock_gettime(CLOCK_MONOTONIC, &initial_time);
+  while (button!=-1) {  
+    scanf("%d %d %d %d \n", &button, &mon2, &mon1, &mon0);
     actualizaMoney(mon0, mon1, mon2);
     money_isr();
-    printf("%d.\n", momento);
-    fsm_fire (cashm_fsm);
-    fsm_fire (cofm_fsm);
-    //timeval_add (&next_activation, &next_activation, &clk_period);
-    //delay_until (&next_activation);
+
+    switch(cycle){
+      case 0 :
+        fsm_fire (cashm_fsm);
+        fsm_fire (cofm_fsm);
+        break;
+      case 1 :
+        fsm_fire (cashm_fsm);
+        break;
+      case 2 :
+        fsm_fire (cashm_fsm);
+        break;
+      default :
+        fsm_fire (cashm_fsm);
+        break;
+    }
+    cycle = (cycle+1)%N_CYCLES;
+
+    timespec_add(&initial_time, &initial_time, &subperiod);
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+    timespec_sub(&end_time, &initial_time, &end_time);
+    nanosleep(&end_time, NULL);
   }
 
   return 0;
