@@ -58,6 +58,23 @@ static int* map9[NUM_WIDTH] ={hVerticalCol, triCol, triCol, verticalCol};
 
 static int** numMap[10] = {map0, map1, map2, map3, map4, map5, map6, map7, map8, map9};
 
+enum clockm_state {
+  CLOCKM_WAIT,
+};
+
+typedef struct clock_fsm_t
+{
+  fsm_t fsm;
+  display_t* display;
+} clock_fsm_t;
+
+clock_fsm_t* clock_fsm_new (fsm_trans_t* tt, display_t* disp){
+  clock_fsm_t* this = (clock_fsm_t*) malloc (sizeof (clock_fsm_t));
+  fsm_init ((fsm_t*) this, tt);
+  this->display = disp;
+  return this;
+}
+
 enum ledm_state {
   LEDM_WAIT,
 };
@@ -86,6 +103,28 @@ void writeX(display_t* this){
   int* x[7]={col1, col2, col3, col4, col3, col2, col1};
 
   write_display(this, x, 7);
+}
+
+static int getTime (fsm_t* this){ return 1;}
+
+static void drawTime(clock_fsm_t* this){
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+  int hour[N_DIGITS] = {tm.tm_hour/10, tm.tm_hour%10, tm.tm_min/10, tm.tm_min%10, tm.tm_sec/10, tm.tm_sec%10,};
+  
+  clear_display(this->display);
+  int i;
+  int res;
+
+  res = write_display(this->display,numMap[hour[0]],NUM_WIDTH);
+  if(res) exit(res);
+  for (i = 1; i < N_DIGITS; ++i)
+  {
+    res = writeSpace(this->display);
+    if(res) exit(res);
+    res = write_display(this->display,numMap[hour[i]],NUM_WIDTH);
+    if(res) exit(res);
+  }
 }
 
 static int infrared= 0;
@@ -121,6 +160,12 @@ static void draw_display(led_fsm_t* this)
 }
 
 // Explicit FSM description
+
+static fsm_trans_t clockm[] = {
+  { CLOCKM_WAIT, getTime, CLOCKM_WAIT, (fsm_output_func_t) drawTime },
+  {-1, NULL, -1, NULL },
+};
+
 static fsm_trans_t ledm[] = {
   { LEDM_WAIT, ir_triggered, LEDM_WAIT, (fsm_output_func_t) draw_display },
   {-1, NULL, -1, NULL },
@@ -134,6 +179,8 @@ int main()
   /*Variables para medida de tiempos*/
   struct timespec a_spec={0, 0};
   struct timespec b_spec={0, 0};
+  struct timespec clockm_spec={0, 0};
+  struct timespec clockmax_spec={0, 0};
   struct timespec ledm_spec={0, 0};
   struct timespec ledmax_spec={0, 0};
 
@@ -152,15 +199,21 @@ int main()
 
   display_t* display = new_display(N_ROW, N_COL);
 
+  clock_fsm_t* clockm_fsm = clock_fsm_new (clockm, display);
   led_fsm_t* ledm_fsm = led_fsm_new (ledm, leds, display);
-
-  writeX(display);
 
   int k;
   gettimeofday (&next_activation, NULL);
   for (k= 0; k < 200; ++k)
   {
     DEBUG(infrared = 1;)
+
+    clock_gettime(CLOCK_MONOTONIC,&b_spec);
+    fsm_fire ( (fsm_t*) clockm_fsm);
+    clock_gettime(CLOCK_MONOTONIC,&a_spec);
+    timespec_sub(&clockm_spec, &a_spec, &b_spec);
+    timespec_max(&clockmax_spec, &clockmax_spec, &clockm_spec);
+
     clock_gettime(CLOCK_MONOTONIC,&b_spec);
     fsm_fire ( (fsm_t*) ledm_fsm);
     clock_gettime(CLOCK_MONOTONIC,&a_spec);
@@ -172,6 +225,7 @@ int main()
 
   free_display(display);
 
+  printf("Tiempo de ejecucion máximo en pintar hora: %d segundos y %d nanosegundos\n",(int) clockmax_spec.tv_sec, (int) clockmax_spec.tv_nsec);
   printf("Tiempo de ejecucion máximo en pintar LEDs: %d segundos y %d nanosegundos\n",(int) ledmax_spec.tv_sec, (int) ledmax_spec.tv_nsec);
 
   return 0;
