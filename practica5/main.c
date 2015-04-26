@@ -29,6 +29,7 @@
 #define N_COL ((NUM_WIDTH+1)*N_DIGITS-1)
 
 #define COL_TIME (SWEEP_US/N_COL)
+#define N_CYCLES (N_COL*2*FREQUENCY)
 
 #ifndef NDEBUG
   #define DEBUG(x) x
@@ -173,16 +174,8 @@ static fsm_trans_t ledm[] = {
 
 int main()
 {
-  struct timeval clk_period = { 0, 1000000/FREQUENCY };
+  struct timeval clk_period = { 0, COL_TIME};
   struct timeval next_activation;
-
-  /*Variables para medida de tiempos*/
-  struct timespec a_spec={0, 0};
-  struct timespec b_spec={0, 0};
-  struct timespec clockm_spec={0, 0};
-  struct timespec clockmax_spec={0, 0};
-  struct timespec ledm_spec={0, 0};
-  struct timespec ledmax_spec={0, 0};
 
   wiringPiSetup();
   pinMode (GPIO_IR, INPUT);
@@ -202,31 +195,26 @@ int main()
   clock_fsm_t* clockm_fsm = clock_fsm_new (clockm, display);
   led_fsm_t* ledm_fsm = led_fsm_new (ledm, leds, display);
 
-  int k;
+  int cycle = 0;
   gettimeofday (&next_activation, NULL);
-  for (k= 0; k < 200; ++k)
-  {
-    DEBUG(infrared = 1;)
+  while (1) {
+    DEBUG(infrared = 1;)  
+    switch(cycle){
+      case 0 :
+        fsm_fire ( (fsm_t*) ledm_fsm);
+        fsm_fire ( (fsm_t*) clockm_fsm);
+        break;
+      default :
+        fsm_fire ( (fsm_t*) ledm_fsm);
+        break;
+    }
+    cycle = (cycle+1)%N_CYCLES;
 
-    clock_gettime(CLOCK_MONOTONIC,&b_spec);
-    fsm_fire ( (fsm_t*) clockm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,&a_spec);
-    timespec_sub(&clockm_spec, &a_spec, &b_spec);
-    timespec_max(&clockmax_spec, &clockmax_spec, &clockm_spec);
-
-    clock_gettime(CLOCK_MONOTONIC,&b_spec);
-    fsm_fire ( (fsm_t*) ledm_fsm);
-    clock_gettime(CLOCK_MONOTONIC,&a_spec);
-    timespec_sub(&ledm_spec, &a_spec, &b_spec);
-    timespec_max(&ledmax_spec, &ledmax_spec, &ledm_spec);
     timeval_add (&next_activation, &next_activation, &clk_period);
     delay_until (&next_activation);
   }
 
   free_display(display);
-
-  printf("Tiempo de ejecucion máximo en pintar hora: %d segundos y %d nanosegundos\n",(int) clockmax_spec.tv_sec, (int) clockmax_spec.tv_nsec);
-  printf("Tiempo de ejecucion máximo en pintar LEDs: %d segundos y %d nanosegundos\n",(int) ledmax_spec.tv_sec, (int) ledmax_spec.tv_nsec);
 
   return 0;
 }
