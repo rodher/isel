@@ -112,7 +112,7 @@ static void drawTime(clock_fsm_t* this){
   time_t t = time(NULL);
   struct tm tm = *localtime(&t);
   int hour[N_DIGITS] = {tm.tm_hour/10, tm.tm_hour%10, tm.tm_min/10, tm.tm_min%10, tm.tm_sec/10, tm.tm_sec%10,};
-  
+  DEBUG(printf("%d%d:%d%d:%d%d\n", hour[0], hour[1], hour[2], hour[3], hour[4], hour[5] );)
   clear_display(this->display);
   int i;
   int res;
