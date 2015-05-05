@@ -11,7 +11,7 @@
 
 #define GPIO_IR 7
 
-#define GPIO_LED0	0
+#define GPIO_LED0 0
 #define GPIO_LED1 1
 #define GPIO_LED2 2
 #define GPIO_LED3 3
@@ -198,7 +198,9 @@ int main()
   int cycle = 0;
   gettimeofday (&next_activation, NULL);
   while (1) {
-    DEBUG(infrared = 1;)  
+    DEBUG({
+      if(cycle%58==0) infrared = 1;
+    })  
     switch(cycle){
       case 0 :
         fsm_fire ( (fsm_t*) ledm_fsm);
