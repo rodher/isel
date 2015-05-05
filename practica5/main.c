@@ -199,7 +199,7 @@ int main()
   gettimeofday (&next_activation, NULL);
   while (1) {
     DEBUG({
-      if(cycle%58==0) infrared = 1;
+      if(cycle%(N_COL*2)==0) infrared = 1;
     })  
     switch(cycle){
       case 0 :
